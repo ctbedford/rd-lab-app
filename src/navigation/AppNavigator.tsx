@@ -1,10 +1,8 @@
 import React from 'react';
-import {
-  NavigationContainer,
-  NavigatorScreenParams,
-} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, Text, ActivityIndicator } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 // Import Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -21,7 +19,7 @@ export type AuthStackParamList = {
   Signup: undefined;
 };
 
-export type MainTabParamList = {
+export type MainTabsParamList = {
   Dashboard: undefined;
   Experiments: undefined;
   Habits: undefined;
@@ -29,56 +27,55 @@ export type MainTabParamList = {
   Settings: undefined;
 };
 
-// For the RootStack, we nest the other navigators
-// We use NavigatorScreenParams to correctly type nested navigators
 export type RootStackParamList = {
-  Auth: NavigatorScreenParams<AuthStackParamList>;
-  Main: NavigatorScreenParams<MainTabParamList>;
-  // Potentially add other top-level modal screens here later if needed
+  AuthFlow: undefined; 
+  MainFlow: undefined; 
 };
 
-const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const MainTabs = createBottomTabNavigator<MainTabParamList>();
-const RootStack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>(); 
+const AuthStackNav = createNativeStackNavigator<AuthStackParamList>();
+const MainTabsNav = createBottomTabNavigator<MainTabsParamList>();
 
 // Auth Stack Navigator (Login, Signup)
-const AuthStackNavigator = () => {
-  return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Signup" component={SignupScreen} />
-    </AuthStack.Navigator>
-  );
-};
+const AuthStack = () => (
+  <AuthStackNav.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStackNav.Screen name="Login" component={LoginScreen} />
+    <AuthStackNav.Screen name="Signup" component={SignupScreen} />
+  </AuthStackNav.Navigator>
+);
 
 // Main App Bottom Tab Navigator
-const MainTabsNavigator = () => {
-  return (
-    <MainTabs.Navigator screenOptions={{ headerShown: true }}>
-      <MainTabs.Screen name="Dashboard" component={DashboardScreen} />
-      <MainTabs.Screen name="Experiments" component={ExperimentListScreen} />
-      <MainTabs.Screen name="Habits" component={HabitListScreen} />
-      <MainTabs.Screen name="Review" component={ReviewScreen} />
-      <MainTabs.Screen name="Settings" component={SettingsScreen} />
-    </MainTabs.Navigator>
-  );
-};
+const MainTabs = () => (
+  <MainTabsNav.Navigator screenOptions={{ headerShown: true }}>
+    <MainTabsNav.Screen name="Dashboard" component={DashboardScreen} />
+    <MainTabsNav.Screen name="Experiments" component={ExperimentListScreen} />
+    <MainTabsNav.Screen name="Habits" component={HabitListScreen} />
+    <MainTabsNav.Screen name="Review" component={ReviewScreen} />
+    <MainTabsNav.Screen name="Settings" component={SettingsScreen} />
+  </MainTabsNav.Navigator>
+);
 
 // Root Navigator (Conditionally renders Auth or Main flow)
 const AppNavigator = () => {
-  // TODO: Replace with actual authentication state from context/store
-  const isAuthenticated = false; // Simulate unauthenticated state for now
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text>Loading session...</Text>
+      </View>
+    );
+  }
 
   return (
-    <NavigationContainer>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <RootStack.Screen name="Main" component={MainTabsNavigator} />
-        ) : (
-          <RootStack.Screen name="Auth" component={AuthStackNavigator} />
-        )}
-      </RootStack.Navigator>
-    </NavigationContainer>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {session && session.user ? (
+        <Stack.Screen name="MainFlow" component={MainTabs} />
+      ) : (
+        <Stack.Screen name="AuthFlow" component={AuthStack} />
+      )}
+    </Stack.Navigator>
   );
 };
 
